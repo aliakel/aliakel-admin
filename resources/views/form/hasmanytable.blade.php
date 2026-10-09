@@ -80,3 +80,5 @@
         </div>
     </div>
 </div>
+
+<hr style="margin-top: 0; margin-bottom: 15px;">

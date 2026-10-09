@@ -7,4 +7,5 @@ composer.lock
 .idea/
 .php_cs.cache
 .vscode/
+.cursor/
 /node_modules
