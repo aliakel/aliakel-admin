@@ -2,12 +2,17 @@
     td .form-group {
         margin-bottom: 0 !important;
     }
+
+    .table-has-many > thead > tr > th {
+        text-align: center;
+        vertical-align: middle;
+    }
 </style>
 
 <hr style="margin-top: 0; margin-bottom: 15px;">
 
-<div class="row">
-    <div class="{{$viewClass['label']}}"><h4 class="pull-right">{{ $label }}</h4></div>
+<div class="{{$viewClass['form-group']}}">
+    <label class="{{$viewClass['label']}} control-label">{{ $label }}</label>
     <div class="{{$viewClass['field']}}">
         <div id="has-many-{{$column}}">
             <table class="table table-has-many has-many-{{$column}}">
@@ -68,13 +73,10 @@
             </template>
 
             @if($options['allowCreate'])
-                <div class="form-group">
-                    <div class="{{$viewClass['field']}}">
-                        <div class="add btn btn-success btn-sm">{!! admin_icon('fa-save') !!}&nbsp;{{ trans('admin.new') }}</div>
-                    </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <div class="add btn btn-success btn-sm">{!! admin_icon('fa-save') !!}&nbsp;{{ trans('admin.new') }}</div>
                 </div>
             @endif
         </div>
     </div>
 </div>
-
