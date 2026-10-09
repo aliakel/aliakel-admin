@@ -4,10 +4,12 @@
     }
 </style>
 
+<hr style="margin-top: 0; margin-bottom: 15px;">
+
 <div class="row">
     <div class="{{$viewClass['label']}}"><h4 class="pull-right">{{ $label }}</h4></div>
     <div class="{{$viewClass['field']}}">
-        <div id="has-many-{{$column}}" style="margin-top: 15px;">
+        <div id="has-many-{{$column}}">
             <table class="table table-has-many has-many-{{$column}}">
                 <thead>
                 <tr>
@@ -75,6 +77,4 @@
         </div>
     </div>
 </div>
-
-<hr style="margin-top: 0px;">
 
