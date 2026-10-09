@@ -232,6 +232,7 @@
                     toolbar: [
                         [{ header: [1, 2, 3, false] }],
                         ['bold', 'italic', 'underline', 'strike'],
+                        ['blockquote', 'code-block'],
                         [{ list: 'ordered' }, { list: 'bullet' }],
                         [{ align: [] }],
                         ['link', 'image'],
@@ -292,8 +293,11 @@
             });
 
             var sync = function () {
-                var html = quill.getSemanticHTML ? quill.getSemanticHTML() : quill.root.innerHTML;
-                input.value = html === '<p></p>' ? '' : html;
+                var html = quill.root.innerHTML;
+                // Quill may emit &nbsp; between words; those prevent wrapping on the site.
+                html = html.replace(/&nbsp;/gi, ' ').replace(/\u00a0/g, ' ');
+                html = html.replace(/>\s+</g, '><').trim();
+                input.value = (html === '<p></p>' || html === '<p><br></p>' || html === '') ? '' : html;
             };
 
             quill.on('text-change', sync);
