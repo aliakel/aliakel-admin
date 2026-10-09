@@ -801,12 +801,14 @@ input.content {
     margin-bottom: 0 !important;
 }
 
-/* HasMany (default mode) */
-.la-hasmany {
+/* Shared colored center headers (HasMany / Embeds) */
+.la-hasmany,
+.la-embeds {
     margin-bottom: 1.25rem;
 }
 
-.la-hasmany-header {
+.la-hasmany-header,
+.la-embeds-header {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -817,13 +819,29 @@ input.content {
     border: 1px solid color-mix(in srgb, var(--la-accent, #0284c7) 28%, #e2e8f0);
 }
 
-.la-hasmany-title {
+.la-hasmany-title,
+.la-embeds-title {
     margin: 0;
     font-size: 0.95rem;
     font-weight: 700;
     letter-spacing: 0.01em;
     text-align: center;
     color: var(--la-accent-strong, #0369a1);
+}
+
+.la-embeds-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.la-embeds-body > .fields-group > .form-group:last-child {
+    margin-bottom: 0;
 }
 
 .la-hasmany-forms {
