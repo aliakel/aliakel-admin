@@ -2563,4 +2563,23 @@ label.btn > input[type="checkbox"] {
     fill: #334155;
 }
 
+/* Circled / check / numbered list markers in the editor */
+.la-richtext .ql-editor li[data-list='bullet'] > .ql-ui:before {
+    content: '\25CB'; /* ○ circled */
+}
+
+.la-richtext .ql-editor li[data-list='unchecked'] > .ql-ui:before {
+    content: '\2610'; /* ☐ */
+    color: #64748b;
+}
+
+.la-richtext .ql-editor li[data-list='checked'] > .ql-ui:before {
+    content: '\2611'; /* ☑ */
+    color: var(--la-accent-strong, #0369a1);
+}
+
+.la-richtext .ql-editor li[data-list='ordered'] > .ql-ui:before {
+    color: #334155;
+}
+
 

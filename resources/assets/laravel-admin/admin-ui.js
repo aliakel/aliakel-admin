@@ -233,7 +233,7 @@
                         [{ header: [1, 2, 3, false] }],
                         ['bold', 'italic', 'underline', 'strike'],
                         ['blockquote', 'code-block'],
-                        [{ list: 'ordered' }, { list: 'bullet' }],
+                        [{ list: 'ordered' }, { list: 'bullet' }, { list: 'check' }],
                         [{ align: [] }],
                         ['link', 'image'],
                         ['clean']
