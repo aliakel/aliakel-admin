@@ -239,12 +239,34 @@
                 return (html === '<p></p>' || html === '<p><br></p>' || html === '') ? '' : html;
             };
 
+            var quillLooksEmpty = function (html) {
+                html = normalizeHtml(html);
+                if (!html) {
+                    return true;
+                }
+
+                // Quill empty editor variants after a failed HTML paste.
+                return /^<(p|div)>(<br\s*\/?>|\s*)<\/\1>$/i.test(html);
+            };
+
             var syncFromQuill = function () {
                 input.value = normalizeHtml(quill.root.innerHTML);
             };
 
             var syncFromSource = function () {
+                // Keep source HTML as the source of truth (do not round-trip through Quill).
                 input.value = normalizeHtml(source.value);
+            };
+
+            var applyHtmlToQuill = function (html) {
+                var clean = html || '';
+                quill.setContents([]);
+                if (!clean) {
+                    return '';
+                }
+
+                quill.clipboard.dangerouslyPasteHTML(0, clean);
+                return normalizeHtml(quill.root.innerHTML);
             };
 
             var quill = new Quill(holder, {
@@ -324,9 +346,19 @@
 
             var toggleSource = function () {
                 if (sourceMode) {
-                    quill.setContents([]);
-                    quill.clipboard.dangerouslyPasteHTML(0, source.value || '');
-                    syncFromQuill();
+                    var html = source.value || '';
+                    var fromQuill = applyHtmlToQuill(html);
+
+                    // Quill clipboard strips a lot of pasted HTML. Never let that
+                    // wipe the field when the source editor still has content.
+                    if (html.trim() && quillLooksEmpty(fromQuill)) {
+                        input.value = normalizeHtml(html);
+                    } else if (html.trim() && fromQuill.length < Math.min(html.trim().length * 0.5, html.trim().length - 20)) {
+                        input.value = normalizeHtml(html);
+                    } else {
+                        input.value = fromQuill;
+                    }
+
                     source.value = '';
                     $wrap.removeClass('is-source');
                     if (htmlBtn) {
@@ -347,13 +379,13 @@
             };
 
             if (document.documentElement.getAttribute('dir') === 'rtl') {
-                quill.format('direction', 'rtl');
-                quill.format('align', 'right');
                 holder.querySelector('.ql-editor').setAttribute('dir', 'rtl');
             }
 
             if (input.value) {
-                quill.clipboard.dangerouslyPasteHTML(input.value);
+                // Visual load only — keep the stored HTML in the textarea as-is.
+                // Quill clipboard often rewrites markup; overwriting here caused empty saves.
+                applyHtmlToQuill(input.value);
             }
 
             var sync = function () {
@@ -371,7 +403,9 @@
                 }
             });
             if (input.form) {
-                input.form.addEventListener('submit', sync);
+                // Capture phase so values are ready before pjax serialize.
+                input.form.addEventListener('submit', sync, true);
+                $(input.form).on('submit', sync);
             }
         });
     }
