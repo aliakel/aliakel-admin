@@ -1,0 +1,34 @@
+<?php
+
+namespace DummyNamespace;
+
+use App\Http\Controllers\Controller;
+use AliAkel\Admin\Controllers\Dashboard;
+use AliAkel\Admin\Layout\Column;
+use AliAkel\Admin\Layout\Content;
+use AliAkel\Admin\Layout\Row;
+
+class HomeController extends Controller
+{
+    public function index(Content $content)
+    {
+        return $content
+            ->title('Dashboard')
+            ->description('Description...')
+            ->row(Dashboard::title())
+            ->row(function (Row $row) {
+
+                $row->column(4, function (Column $column) {
+                    $column->append(Dashboard::environment());
+                });
+
+                $row->column(4, function (Column $column) {
+                    $column->append(Dashboard::extensions());
+                });
+
+                $row->column(4, function (Column $column) {
+                    $column->append(Dashboard::dependencies());
+                });
+            });
+    }
+}

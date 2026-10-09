@@ -1,0 +1,49 @@
+<?php
+
+namespace AliAkel\Admin\Grid\Column;
+
+use Illuminate\Contracts\Support\Renderable;
+
+class Help implements Renderable
+{
+    /**
+     * @var string
+     */
+    protected $message = '';
+
+    /**
+     * Help constructor.
+     *
+     * @param string $message
+     */
+    public function __construct($message = '')
+    {
+        $this->message = $message;
+    }
+
+    /**
+     * Render help  header.
+     *
+     * @return string
+     */
+    public function render()
+    {
+        $data = [
+            'toggle'    => 'tooltip',
+            'placement' => 'right',
+            'html'      => 'true',
+            'title'     => $this->message,
+        ];
+
+        $data = collect($data)->map(function ($val, $key) {
+            return "data-{$key}=\"{$val}\"";
+        })->implode(' ');
+
+        $featherIcon1 = admin_icon('fa fa-question-circle');
+        return <<<HELP
+<a href="javascript:void(0);" class="grid-column-help" {$data}>
+    {$featherIcon1}
+</a>
+HELP;
+    }
+}

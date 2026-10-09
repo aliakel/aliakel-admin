@@ -1,0 +1,11 @@
+{
+    "name": "aliakel-admin",
+    "private": true,
+    "scripts": {
+        "build:css": "tailwindcss -i ./resources/css/admin.css -o ./resources/assets/laravel-admin/admin.css --minify"
+    },
+    "devDependencies": {
+        "@tailwindcss/cli": "^4.1.14",
+        "tailwindcss": "^4.1.14"
+    }
+}

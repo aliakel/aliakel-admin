@@ -1,0 +1,17 @@
+<?php
+
+/**
+ * AliAkel Admin bootstrap.
+ *
+ * Remove built-in form fields:
+ * AliAkel\Admin\Form::forget(['map', 'editor']);
+ *
+ * Extend custom form fields:
+ * AliAkel\Admin\Form::extend('php', PHPEditor::class);
+ *
+ * Require extra assets:
+ * Admin::css('/packages/prettydocs/css/styles.css');
+ * Admin::js('/packages/prettydocs/js/main.js');
+ */
+
+AliAkel\Admin\Form::forget(['map', 'editor']);
