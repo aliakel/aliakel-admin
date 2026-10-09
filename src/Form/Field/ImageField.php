@@ -93,11 +93,11 @@ trait ImageField
      * @param string     $path     Absolute path, or relative to public/ / storage/app/public/
      * @param int|float  $size     Watermark width as % of image width (default 20)
      * @param int        $opacity  0–100 (default 50)
-     * @param string     $position Intervention insert position (default bottom-right)
+     * @param string     $position Intervention insert position (default center)
      *
      * @return $this
      */
-    public function watermark($path, $size = 20, int $opacity = 50, string $position = 'bottom-right')
+    public function watermark($path, $size = 20, int $opacity = 50, string $position = 'center')
     {
         $this->requireIntervention();
 
@@ -105,7 +105,7 @@ trait ImageField
             'path'     => $path,
             'size'     => max(1, (float) $size),
             'opacity'  => max(0, min(100, $opacity)),
-            'position' => $position ?: 'bottom-right',
+            'position' => $position ?: 'center',
         ];
 
         return $this;
@@ -126,8 +126,20 @@ trait ImageField
 
         $this->requireIntervention();
 
+        $alreadyWebp = $this->isWebpFile($target);
+        $needsWebpConversion = $this->convertToWebp && !$alreadyWebp;
+
         if ($this->convertToWebp) {
             $this->forceWebpStoreName();
+        }
+
+        // Already WebP and nothing else to do — keep file as-is.
+        if ($this->convertToWebp && $alreadyWebp
+            && empty($this->interventionCalls)
+            && $this->watermarkOptions === null
+            && $this->compressQuality === null
+        ) {
+            return $target;
         }
 
         $image = ImageManagerStatic::make($target);
@@ -140,10 +152,14 @@ trait ImageField
             $this->applyWatermark($image);
         }
 
-        $format = $this->outputFormat($target);
-        $quality = $this->compressQuality;
+        $format = $this->outputFormat($target, $needsWebpConversion || ($this->convertToWebp && $alreadyWebp));
+        $quality = $this->compressQuality ?? ($needsWebpConversion ? 90 : null);
 
-        if ($format !== null) {
+        if ($format === 'webp' || $needsWebpConversion) {
+            // Encode explicitly so non-webp uploads become real WebP bytes.
+            $encoded = (string) $image->encode('webp', $quality ?? 90);
+            file_put_contents($target, $encoded);
+        } elseif ($format !== null) {
             $image->save($target, $quality, $format);
         } elseif ($quality !== null) {
             $image->save($target, $quality);
@@ -345,6 +361,38 @@ trait ImageField
     }
 
     /**
+     * Whether the given file path is already a WebP image.
+     *
+     * @param string $target
+     *
+     * @return bool
+     */
+    protected function isWebpFile(string $target): bool
+    {
+        if (Str::endsWith(Str::lower($target), '.webp')) {
+            return true;
+        }
+
+        if (!is_file($target)) {
+            return false;
+        }
+
+        if (function_exists('mime_content_type')) {
+            $mime = @mime_content_type($target);
+            if ($mime === 'image/webp') {
+                return true;
+            }
+        }
+
+        // IMAGETYPE_WEBP = 18 (PHP 7.1+)
+        if (defined('IMAGETYPE_WEBP') && function_exists('exif_imagetype')) {
+            return @exif_imagetype($target) === IMAGETYPE_WEBP;
+        }
+
+        return false;
+    }
+
+    /**
      * @param \Intervention\Image\Image $image
      *
      * @return void
@@ -366,7 +414,9 @@ trait ImageField
             $watermark->opacity($options['opacity']);
         }
 
-        $image->insert($watermark, $options['position'], 10, 10);
+        $position = $options['position'];
+        $offset = in_array($position, ['center', 'centre'], true) ? 0 : 10;
+        $image->insert($watermark, $position, $offset, $offset);
     }
 
     /**
@@ -400,12 +450,13 @@ trait ImageField
 
     /**
      * @param string $target
+     * @param bool   $asWebp Force WebP output (convert or already WebP with processing)
      *
      * @return string|null
      */
-    protected function outputFormat(string $target): ?string
+    protected function outputFormat(string $target, bool $asWebp = false): ?string
     {
-        if ($this->convertToWebp) {
+        if ($asWebp || $this->convertToWebp) {
             return 'webp';
         }
 
