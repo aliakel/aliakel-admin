@@ -21,9 +21,9 @@ class Image extends File
     protected $rules = 'image';
 
     /**
-     * @param array|UploadedFile $image
+     * @param array|UploadedFile|null $image
      *
-     * @return string
+     * @return string|null
      */
     public function prepare($image)
     {
@@ -31,8 +31,18 @@ class Image extends File
             return parent::prepare($image);
         }
 
-        if (request()->has(static::FILE_DELETE_FLAG)) {
-            return $this->destroy();
+        $hasValidUpload = $image instanceof UploadedFile && $image->isValid();
+
+        // Explicit remove (ajax) with no replacement file.
+        if (request()->has(static::FILE_DELETE_FLAG) && !$hasValidUpload) {
+            $this->destroy();
+
+            return null;
+        }
+
+        // Submit without a new image — keep the existing column value.
+        if (!$hasValidUpload) {
+            return $this->original;
         }
 
         $this->name = $this->getStoreName($image);
@@ -41,7 +51,9 @@ class Image extends File
 
         $path = $this->uploadAndDeleteOriginal($image);
 
-        $this->uploadAndDeleteOriginalThumbnail($image);
+        if ($path) {
+            $this->uploadAndDeleteOriginalThumbnail($image);
+        }
 
         return $path;
     }

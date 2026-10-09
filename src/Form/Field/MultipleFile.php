@@ -121,7 +121,7 @@ class MultipleFile extends Field
     /**
      * Prepare for saving.
      *
-     * @param UploadedFile|array $files
+     * @param UploadedFile|array|null $files
      *
      * @return mixed|string
      */
@@ -137,6 +137,15 @@ class MultipleFile extends Field
 
         if (is_string($files) && request()->has(static::FILE_SORT_FLAG)) {
             return $this->sortFiles($files);
+        }
+
+        $files = array_values(array_filter((array) $files, function ($file) {
+            return $file instanceof UploadedFile && $file->isValid();
+        }));
+
+        // Submit without new files — keep existing values.
+        if (empty($files)) {
+            return $this->original();
         }
 
         $targets = array_map([$this, 'prepareForeach'], $files);

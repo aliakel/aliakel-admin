@@ -91,7 +91,7 @@ class File extends Field
     /**
      * Prepare for saving.
      *
-     * @param UploadedFile|array $file
+     * @param UploadedFile|array|null $file
      *
      * @return mixed|string
      */
@@ -101,8 +101,18 @@ class File extends Field
             return parent::prepare($file);
         }
 
-        if (request()->has(static::FILE_DELETE_FLAG)) {
-            return $this->destroy();
+        $hasValidUpload = $file instanceof UploadedFile && $file->isValid();
+
+        // Explicit remove (ajax) with no replacement file.
+        if (request()->has(static::FILE_DELETE_FLAG) && !$hasValidUpload) {
+            $this->destroy();
+
+            return null;
+        }
+
+        // Submit without a new file — keep the existing column value.
+        if (!$hasValidUpload) {
+            return $this->original;
         }
 
         $this->name = $this->getStoreName($file);
@@ -121,17 +131,18 @@ class File extends Field
     {
         $this->renameIfExists($file);
 
-        $path = null;
-
         if (!is_null($this->storagePermission)) {
             $path = $this->storage->putFileAs($this->getDirectory(), $file, $this->name, $this->storagePermission);
         } else {
             $path = $this->storage->putFileAs($this->getDirectory(), $file, $this->name);
         }
 
-        $this->destroy();
+        // Only remove the previous file after a successful store.
+        if ($path) {
+            $this->destroy();
+        }
 
-        return $path;
+        return $path ?: $this->original;
     }
 
     /**
