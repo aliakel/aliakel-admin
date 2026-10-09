@@ -19,12 +19,12 @@
         "php": ">=8.0.0",
         "symfony/dom-crawler": "^5.4 || ^6.4 || ^7.0 || ^8.0",
         "laravel/framework": ">=10.0",
-        "doctrine/dbal": "^3.8 || ^4.2"
+        "doctrine/dbal": "^3.8 || ^4.2",
+        "intervention/image": "^2.7"
     },
     "require-dev": {
         "laravel/laravel": ">=10.0",
         "fzaninotto/faker": "~1.4",
-        "intervention/image": "~2.3",
         "laravel/browser-kit-testing": "^6.0",
         "spatie/phpunit-watcher": "^1.22.0"
     },
@@ -49,7 +49,6 @@
         "test": "./vendor/bin/phpunit"
     },
     "suggest": {
-        "intervention/image": "Required to handling and manipulation upload images (~2.3).",
         "spatie/eloquent-sortable": "Required to built orderable gird."
     },
     "extra": {
