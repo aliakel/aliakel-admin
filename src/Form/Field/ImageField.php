@@ -3,9 +3,8 @@
 namespace AliAkel\Admin\Form\Field;
 
 use Illuminate\Support\Str;
-use Intervention\Image\Constraint;
-use Intervention\Image\Facades\Image as InterventionImage;
-use Intervention\Image\ImageManagerStatic;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Interfaces\ImageInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 trait ImageField
@@ -72,7 +71,7 @@ trait ImageField
     }
 
     /**
-     * Convert the stored image (and thumbnails) to WebP.
+     * Convert the stored image (and thumbnails) to WebP when the upload is not already WebP.
      *
      * @param bool $enabled
      *
@@ -93,7 +92,7 @@ trait ImageField
      * @param string     $path     Absolute path, or relative to public/ / storage/app/public/
      * @param int|float  $size     Watermark width as % of image width (default 20)
      * @param int        $opacity  0–100 (default 50)
-     * @param string     $position Intervention insert position (default center)
+     * @param string     $position Intervention place position (default center)
      *
      * @return $this
      */
@@ -142,7 +141,7 @@ trait ImageField
             return $target;
         }
 
-        $image = ImageManagerStatic::make($target);
+        $image = $this->imageManager()->read($target);
 
         foreach ($this->interventionCalls as $call) {
             call_user_func_array([$image, $call['method']], $call['arguments']);
@@ -152,17 +151,13 @@ trait ImageField
             $this->applyWatermark($image);
         }
 
-        $format = $this->outputFormat($target, $needsWebpConversion || ($this->convertToWebp && $alreadyWebp));
-        $quality = $this->compressQuality ?? ($needsWebpConversion ? 90 : null);
+        $quality = $this->compressQuality ?? 90;
 
-        if ($format === 'webp' || $needsWebpConversion) {
-            // Encode explicitly so non-webp uploads become real WebP bytes.
-            $encoded = (string) $image->encode('webp', $quality ?? 90);
-            file_put_contents($target, $encoded);
-        } elseif ($format !== null) {
-            $image->save($target, $quality, $format);
-        } elseif ($quality !== null) {
-            $image->save($target, $quality);
+        if ($needsWebpConversion || ($this->convertToWebp && $alreadyWebp)) {
+            file_put_contents($target, (string) $image->toWebp($quality));
+        } elseif ($this->compressQuality !== null) {
+            $ext = strtolower(pathinfo($target, PATHINFO_EXTENSION));
+            file_put_contents($target, (string) $this->encodeByExtension($image, $ext, $quality));
         } else {
             $image->save($target);
         }
@@ -242,10 +237,6 @@ trait ImageField
         }
 
         foreach ($this->thumbnails as $name => $_) {
-            /*  Refactoring actual remove lofic to another method destroyThumbnailFile()
-            to make deleting thumbnails work with multiple as well as
-            single image upload. */
-
             if (is_array($this->original)) {
                 if (empty($this->original)) {
                     continue;
@@ -269,10 +260,7 @@ trait ImageField
     {
         $ext = @pathinfo($original, PATHINFO_EXTENSION);
 
-        // We remove extension from file name so we can append thumbnail type
         $path = @Str::replaceLast('.'.$ext, '', $original);
-
-        // We merge original name + thumbnail name + extension
         $path = $path.'-'.$name.'.'.$ext;
 
         if ($this->storage->exists($path)) {
@@ -290,23 +278,21 @@ trait ImageField
     protected function uploadAndDeleteOriginalThumbnail(UploadedFile $file)
     {
         foreach ($this->thumbnails as $name => $size) {
-            // We need to get extension type ( .jpeg , .png ...)
             $ext = pathinfo($this->name, PATHINFO_EXTENSION);
-
-            // We remove extension from file name so we can append thumbnail type
             $path = Str::replaceLast('.'.$ext, '', $this->name);
-
-            // We merge original name + thumbnail name + extension
             $path = $path.'-'.$name.'.'.$ext;
 
-            /** @var \Intervention\Image\Image $image */
-            $image = InterventionImage::make($file);
+            $image = $this->imageManager()->read($file->getRealPath());
 
-            $action = $size[2] ?? 'resize';
-            // Resize image with aspect ratio
-            $image->$action($size[0], $size[1], function (Constraint $constraint) {
-                $constraint->aspectRatio();
-            })->resizeCanvas($size[0], $size[1], 'center', false, '#ffffff');
+            $action = $size[2] ?? 'contain';
+            // Match legacy "resize + canvas" by containing into a fixed box.
+            if (in_array($action, ['resize', 'contain'], true)) {
+                $image->contain($size[0], $size[1], 'ffffff');
+            } elseif ($action === 'fit' || $action === 'cover') {
+                $image->cover($size[0], $size[1]);
+            } else {
+                $image->$action($size[0], $size[1]);
+            }
 
             $encoded = $this->encodeImage($image);
 
@@ -327,9 +313,18 @@ trait ImageField
      */
     protected function requireIntervention()
     {
-        if (!class_exists(ImageManagerStatic::class)) {
+        if (!class_exists(ImageManager::class)) {
             throw new \Exception('To use image handling and manipulation, please install [intervention/image] first.');
         }
+    }
+
+    protected function imageManager(): ImageManager
+    {
+        if (extension_loaded('imagick')) {
+            return ImageManager::imagick();
+        }
+
+        return ImageManager::gd();
     }
 
     protected function shouldProcessImage(): bool
@@ -384,7 +379,6 @@ trait ImageField
             }
         }
 
-        // IMAGETYPE_WEBP = 18 (PHP 7.1+)
         if (defined('IMAGETYPE_WEBP') && function_exists('exif_imagetype')) {
             return @exif_imagetype($target) === IMAGETYPE_WEBP;
         }
@@ -393,30 +387,24 @@ trait ImageField
     }
 
     /**
-     * @param \Intervention\Image\Image $image
+     * @param ImageInterface $image
      *
      * @return void
      */
-    protected function applyWatermark($image)
+    protected function applyWatermark(ImageInterface $image)
     {
         $options = $this->watermarkOptions;
         $watermarkPath = $this->resolveWatermarkPath($options['path']);
 
-        $watermark = ImageManagerStatic::make($watermarkPath);
+        $watermark = $this->imageManager()->read($watermarkPath);
 
         $targetWidth = (int) max(1, round($image->width() * ($options['size'] / 100)));
-        $watermark->resize($targetWidth, null, function (Constraint $constraint) {
-            $constraint->aspectRatio();
-            $constraint->upsize();
-        });
-
-        if ($options['opacity'] < 100) {
-            $watermark->opacity($options['opacity']);
-        }
+        $watermark->scale(width: $targetWidth);
 
         $position = $options['position'];
         $offset = in_array($position, ['center', 'centre'], true) ? 0 : 10;
-        $image->insert($watermark, $position, $offset, $offset);
+
+        $image->place($watermark, $position, $offset, $offset, $options['opacity']);
     }
 
     /**
@@ -449,48 +437,36 @@ trait ImageField
     }
 
     /**
-     * @param string $target
-     * @param bool   $asWebp Force WebP output (convert or already WebP with processing)
+     * @param ImageInterface $image
      *
-     * @return string|null
+     * @return string
      */
-    protected function outputFormat(string $target, bool $asWebp = false): ?string
-    {
-        if ($asWebp || $this->convertToWebp) {
-            return 'webp';
-        }
-
-        if (!function_exists('exif_imagetype') || !@is_file($target)) {
-            return null;
-        }
-
-        $type = @exif_imagetype($target);
-        if ($type === false) {
-            return null;
-        }
-
-        $ext = image_type_to_extension($type, false);
-
-        return $ext ?: null;
-    }
-
-    /**
-     * @param \Intervention\Image\Image $image
-     *
-     * @return \Intervention\Image\Image
-     */
-    protected function encodeImage($image)
+    protected function encodeImage(ImageInterface $image): string
     {
         $quality = $this->compressQuality ?? 90;
 
         if ($this->convertToWebp) {
-            return $image->encode('webp', $quality);
+            return (string) $image->toWebp($quality);
         }
 
-        if ($this->compressQuality !== null) {
-            return $image->encode(null, $quality);
-        }
+        return (string) $image->encode();
+    }
 
-        return $image->encode();
+    /**
+     * @param ImageInterface $image
+     * @param string         $ext
+     * @param int            $quality
+     *
+     * @return mixed
+     */
+    protected function encodeByExtension(ImageInterface $image, string $ext, int $quality)
+    {
+        return match ($ext) {
+            'webp' => $image->toWebp($quality),
+            'png'  => $image->toPng(),
+            'gif'  => $image->toGif(),
+            'avif' => $image->toAvif($quality),
+            default => $image->toJpeg($quality),
+        };
     }
 }

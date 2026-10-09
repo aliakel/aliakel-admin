@@ -20,7 +20,7 @@
         "symfony/dom-crawler": "^5.4 || ^6.4 || ^7.0 || ^8.0",
         "laravel/framework": ">=10.0",
         "doctrine/dbal": "^3.8 || ^4.2",
-        "intervention/image": "^2.7"
+        "intervention/image": "^3.11"
     },
     "require-dev": {
         "laravel/laravel": ">=10.0",
