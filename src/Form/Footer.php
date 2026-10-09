@@ -83,6 +83,30 @@ class Footer implements Renderable
     }
 
     /**
+     * Whether the submit button is enabled.
+     *
+     * @return bool
+     */
+    public function hasSubmit(): bool
+    {
+        return in_array('submit', $this->buttons, true);
+    }
+
+    /**
+     * Render submit button for the form header.
+     *
+     * @return string
+     */
+    public function renderHeaderSubmit(): string
+    {
+        if (!$this->hasSubmit()) {
+            return '';
+        }
+
+        return view('admin::form.header-submit')->render();
+    }
+
+    /**
      * Disable View Checkbox.
      *
      * @return $this

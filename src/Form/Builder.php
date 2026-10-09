@@ -610,6 +610,16 @@ SCRIPT;
     }
 
     /**
+     * Render submit button in the form header.
+     *
+     * @return string
+     */
+    public function renderHeaderSubmit(): string
+    {
+        return $this->footer->renderHeaderSubmit();
+    }
+
+    /**
      * Render form footer.
      *
      * @return string

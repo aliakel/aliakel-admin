@@ -1,12 +1,14 @@
 <div class="la-card mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    {!! $form->open() !!}
+
     <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
         <h3 class="text-base font-semibold text-slate-900">{{ $form->title() }}</h3>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center justify-end gap-2">
+            {!! $form->renderHeaderSubmit() !!}
             {!! $form->renderTools() !!}
         </div>
     </div>
-    {!! $form->open() !!}
 
     <div class="p-5">
 
@@ -53,4 +55,3 @@
 <!-- /.box-footer -->
     {!! $form->close() !!}
 </div>
-
