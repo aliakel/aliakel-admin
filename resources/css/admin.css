@@ -2582,4 +2582,53 @@ label.btn > input[type="checkbox"] {
     color: #334155;
 }
 
+.la-richtext .ql-snow .ql-html {
+    width: auto;
+    min-width: 2rem;
+    padding: 0 0.4rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #334155;
+}
+
+.la-richtext .ql-snow .ql-html::before {
+    content: '</>';
+}
+
+.la-richtext .ql-snow .ql-html.ql-active {
+    color: var(--la-accent-strong, #0369a1);
+}
+
+.la-richtext .la-richtext-source {
+    display: none;
+    width: 100%;
+    min-height: 16rem;
+    margin: 0;
+    padding: 0.85rem 1rem;
+    border: 0;
+    resize: vertical;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    outline: none;
+}
+
+.la-richtext.is-source .ql-container {
+    display: none;
+}
+
+.la-richtext.is-source .la-richtext-source {
+    display: block;
+}
+
+.la-richtext.is-source .ql-toolbar.ql-snow button:not(.ql-html),
+.la-richtext.is-source .ql-toolbar.ql-snow .ql-picker {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
 

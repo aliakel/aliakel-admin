@@ -226,20 +226,125 @@
 
             input.dataset.richtextReady = '1';
 
+            var sourceMode = false;
+            var source = document.createElement('textarea');
+            source.className = 'la-richtext-source';
+            source.setAttribute('spellcheck', 'false');
+            source.setAttribute('aria-label', 'HTML source');
+            $wrap.append(source);
+
+            var normalizeHtml = function (html) {
+                html = (html || '').replace(/&nbsp;/gi, ' ').replace(/\u00a0/g, ' ');
+                html = html.replace(/>\s+</g, '><').trim();
+                return (html === '<p></p>' || html === '<p><br></p>' || html === '') ? '' : html;
+            };
+
+            var syncFromQuill = function () {
+                input.value = normalizeHtml(quill.root.innerHTML);
+            };
+
+            var syncFromSource = function () {
+                input.value = normalizeHtml(source.value);
+            };
+
             var quill = new Quill(holder, {
                 theme: 'snow',
                 modules: {
-                    toolbar: [
-                        [{ header: [1, 2, 3, false] }],
-                        ['bold', 'italic', 'underline', 'strike'],
-                        ['blockquote', 'code-block'],
-                        [{ list: 'ordered' }, { list: 'bullet' }, { list: 'check' }],
-                        [{ align: [] }],
-                        ['link', 'image'],
-                        ['clean']
-                    ]
+                    toolbar: {
+                        container: [
+                            [{ header: [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            ['blockquote', 'code-block'],
+                            [{ list: 'ordered' }, { list: 'bullet' }, { list: 'check' }],
+                            [{ align: [] }],
+                            ['link', 'image'],
+                            ['clean'],
+                            ['html']
+                        ],
+                        handlers: {
+                            html: function () {
+                                toggleSource();
+                            },
+                            image: function () {
+                                if (sourceMode) {
+                                    return;
+                                }
+
+                                var picker = document.createElement('input');
+                                picker.type = 'file';
+                                picker.accept = 'image/png,image/jpeg,image/gif,image/webp';
+                                picker.addEventListener('change', function () {
+                                    var file = picker.files && picker.files[0];
+                                    if (!file) {
+                                        return;
+                                    }
+
+                                    var body = new FormData();
+                                    body.append('image', file);
+                                    body.append('_token', window.LA.token);
+
+                                    fetch($wrap.data('upload'), {
+                                        method: 'POST',
+                                        body: body,
+                                        credentials: 'same-origin',
+                                        headers: {
+                                            'X-CSRF-TOKEN': window.LA.token,
+                                            'X-Requested-With': 'XMLHttpRequest',
+                                            'Accept': 'application/json'
+                                        }
+                                    }).then(function (response) {
+                                        return response.json().then(function (json) {
+                                            if (!response.ok) {
+                                                throw new Error(json.message || 'Upload failed');
+                                            }
+                                            return json;
+                                        });
+                                    }).then(function (json) {
+                                        var range = quill.getSelection(true);
+                                        quill.insertEmbed(range.index, 'image', json.url, 'user');
+                                        quill.setSelection(range.index + 1);
+                                    }).catch(function (error) {
+                                        window.alert(error.message || 'Upload failed');
+                                    });
+                                });
+                                picker.click();
+                            }
+                        }
+                    }
                 }
             });
+
+            var toolbar = quill.getModule('toolbar');
+            var htmlBtn = toolbar.container.querySelector('button.ql-html');
+            if (htmlBtn) {
+                htmlBtn.setAttribute('type', 'button');
+                htmlBtn.setAttribute('title', 'HTML source');
+                htmlBtn.setAttribute('aria-label', 'HTML source');
+            }
+
+            var toggleSource = function () {
+                if (sourceMode) {
+                    quill.setContents([]);
+                    quill.clipboard.dangerouslyPasteHTML(0, source.value || '');
+                    syncFromQuill();
+                    source.value = '';
+                    $wrap.removeClass('is-source');
+                    if (htmlBtn) {
+                        htmlBtn.classList.remove('ql-active');
+                    }
+                    sourceMode = false;
+                    return;
+                }
+
+                syncFromQuill();
+                source.value = input.value || '';
+                $wrap.addClass('is-source');
+                if (htmlBtn) {
+                    htmlBtn.classList.add('ql-active');
+                }
+                sourceMode = true;
+                source.focus();
+            };
 
             if (document.documentElement.getAttribute('dir') === 'rtl') {
                 quill.format('direction', 'rtl');
@@ -251,56 +356,20 @@
                 quill.clipboard.dangerouslyPasteHTML(input.value);
             }
 
-            quill.getModule('toolbar').addHandler('image', function () {
-                var picker = document.createElement('input');
-                picker.type = 'file';
-                picker.accept = 'image/png,image/jpeg,image/gif,image/webp';
-                picker.addEventListener('change', function () {
-                    var file = picker.files && picker.files[0];
-                    if (!file) {
-                        return;
-                    }
-
-                    var body = new FormData();
-                    body.append('image', file);
-                    body.append('_token', window.LA.token);
-
-                    fetch($wrap.data('upload'), {
-                        method: 'POST',
-                        body: body,
-                        credentials: 'same-origin',
-                        headers: {
-                            'X-CSRF-TOKEN': window.LA.token,
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Accept': 'application/json'
-                        }
-                    }).then(function (response) {
-                        return response.json().then(function (json) {
-                            if (!response.ok) {
-                                throw new Error(json.message || 'Upload failed');
-                            }
-                            return json;
-                        });
-                    }).then(function (json) {
-                        var range = quill.getSelection(true);
-                        quill.insertEmbed(range.index, 'image', json.url, 'user');
-                        quill.setSelection(range.index + 1);
-                    }).catch(function (error) {
-                        window.alert(error.message || 'Upload failed');
-                    });
-                });
-                picker.click();
-            });
-
             var sync = function () {
-                var html = quill.root.innerHTML;
-                // Quill may emit &nbsp; between words; those prevent wrapping on the site.
-                html = html.replace(/&nbsp;/gi, ' ').replace(/\u00a0/g, ' ');
-                html = html.replace(/>\s+</g, '><').trim();
-                input.value = (html === '<p></p>' || html === '<p><br></p>' || html === '') ? '' : html;
+                if (sourceMode) {
+                    syncFromSource();
+                    return;
+                }
+                syncFromQuill();
             };
 
-            quill.on('text-change', sync);
+            source.addEventListener('input', syncFromSource);
+            quill.on('text-change', function () {
+                if (!sourceMode) {
+                    syncFromQuill();
+                }
+            });
             if (input.form) {
                 input.form.addEventListener('submit', sync);
             }
