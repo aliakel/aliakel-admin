@@ -60,7 +60,7 @@ return [
     */
     'route' => [
 
-        'prefix' => env('ADMIN_ROUTE_PREFIX', 'admin'),
+        'prefix' => env('ADMIN_ROUTE_PREFIX', 'dashboard'),
 
         'namespace' => 'Modules\\Admin\\Encore\\Controllers',
 
@@ -241,7 +241,7 @@ return [
          * or specific method to path like: get:admin/auth/logs.
          */
         'except' => [
-            env('ADMIN_ROUTE_PREFIX', 'admin').'/auth/logs*',
+            env('ADMIN_ROUTE_PREFIX', 'dashboard').'/auth/logs*',
         ],
     ],
 

@@ -145,7 +145,7 @@ class Grid
         'show_pagination'        => true,
         'show_tools'             => true,
         'show_filter'            => true,
-        'show_exporter'          => true,
+        'show_exporter'          => false,
         'show_actions'           => true,
         'show_row_selector'      => true,
         'show_create_btn'        => true,

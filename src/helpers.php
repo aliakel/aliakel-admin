@@ -182,6 +182,146 @@ if (!function_exists('admin_menu_title')) {
     }
 }
 
+if (!function_exists('admin_menu_titles_by_uri')) {
+
+    /**
+     * Flat map of menu uri => localized title for the current locale.
+     *
+     * @return array<string, string>
+     */
+    function admin_menu_titles_by_uri(): array
+    {
+        static $maps = [];
+
+        $locale = app()->getLocale();
+
+        if (isset($maps[$locale])) {
+            return $maps[$locale];
+        }
+
+        $map = [];
+
+        $walk = function (array $items) use (&$walk, &$map) {
+            foreach ($items as $item) {
+                $uri = trim((string) ($item['uri'] ?? ''), '/');
+
+                if ($uri !== '') {
+                    $map[$uri] = admin_menu_title($item);
+                } elseif (($item['uri'] ?? null) === '/') {
+                    $map['/'] = admin_menu_title($item);
+                }
+
+                if (!empty($item['children']) && is_array($item['children'])) {
+                    $walk($item['children']);
+                }
+            }
+        };
+
+        try {
+            $walk(\AliAkel\Admin\Facades\Admin::menu());
+        } catch (\Throwable $e) {
+            // Menu may be unavailable outside an authenticated admin request.
+        }
+
+        return $maps[$locale] = $map;
+    }
+}
+
+if (!function_exists('admin_translate_label')) {
+
+    /**
+     * Localize a page/menu label via menu titles or admin.menu_titles.
+     */
+    function admin_translate_label(?string $label): string
+    {
+        $label = trim(html_entity_decode(strip_tags((string) $label)));
+
+        if ($label === '') {
+            return '';
+        }
+
+        $slug = trim(str_replace(' ', '_', strtolower($label)));
+        $menuKey = 'admin.menu_titles.'.$slug;
+
+        if (\Illuminate\Support\Facades\Lang::has($menuKey)) {
+            return (string) __($menuKey);
+        }
+
+        $adminKey = 'admin.'.$slug;
+
+        if (\Illuminate\Support\Facades\Lang::has($adminKey) && !is_array(__($adminKey))) {
+            return (string) __($adminKey);
+        }
+
+        foreach (admin_menu_titles_by_uri() as $title) {
+            if (strcasecmp($title, $label) === 0) {
+                return $title;
+            }
+        }
+
+        return $label;
+    }
+}
+
+if (!function_exists('admin_default_breadcrumb')) {
+
+    /**
+     * Build default breadcrumb items from the current admin path.
+     *
+     * @return list<array{text: string, url?: string}>
+     */
+    function admin_default_breadcrumb(): array
+    {
+        $prefix = trim((string) config('admin.route.prefix', 'admin'), '/');
+        $segments = request()->segments();
+
+        if (($segments[0] ?? null) === $prefix) {
+            array_shift($segments);
+        }
+
+        if ($segments === []) {
+            return [];
+        }
+
+        $map = admin_menu_titles_by_uri();
+        $items = [];
+        $path = '';
+
+        foreach ($segments as $index => $segment) {
+            $path = $path === '' ? $segment : $path.'/'.$segment;
+            $isLast = $index === count($segments) - 1;
+
+            $text = $map[$path]
+                ?? $map[$segment]
+                ?? null;
+
+            if ($text === null) {
+                $actionKey = 'admin.'.$segment;
+                if (\Illuminate\Support\Facades\Lang::has($actionKey) && in_array($segment, ['create', 'edit', 'show', 'view'], true)) {
+                    $text = (string) __($actionKey);
+                } elseif (is_numeric($segment)) {
+                    $text = '#'.$segment;
+                } else {
+                    $slugKey = 'admin.menu_titles.'.str_replace('-', '_', strtolower($segment));
+                    $text = \Illuminate\Support\Facades\Lang::has($slugKey)
+                        ? (string) __($slugKey)
+                        : ucfirst(str_replace(['-', '_'], ' ', $segment));
+                }
+            }
+
+            $item = ['text' => $text];
+
+            if (!$isLast) {
+                $item['url'] = $path;
+            }
+
+            $items[] = $item;
+        }
+
+        return $items;
+    }
+}
+
 if (!function_exists('admin_base_path')) {
     /**
      * Get admin url.

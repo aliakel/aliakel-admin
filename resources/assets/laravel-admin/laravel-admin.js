@@ -19,7 +19,10 @@ toastr.options = {
     closeButton: true,
     progressBar: true,
     showMethod: 'slideDown',
-    timeOut: 4000
+    timeOut: 4000,
+    positionClass: document.documentElement.getAttribute('dir') === 'rtl'
+        ? 'toast-top-left'
+        : 'toast-top-right'
 };
 
 $.pjax.defaults.timeout = 5000;

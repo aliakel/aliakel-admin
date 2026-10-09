@@ -103,9 +103,14 @@ class AuthController extends Controller
             }
         );
 
-        return $content
-            ->title(trans('admin.user_setting'))
-            ->body($form->edit(Admin::user()->id));
+        $content->title(trans('admin.user_setting'));
+
+        $user = Admin::user();
+        if ($user && method_exists($user, 'passwordMustBeChanged') && $user->passwordMustBeChanged()) {
+            $content->description(trans('admin.password_change_required'));
+        }
+
+        return $content->body($form->edit(Admin::user()->id));
     }
 
     /**
@@ -148,10 +153,14 @@ class AuthController extends Controller
             }
         });
 
-        $form->saved(function () {
+        $form->saved(function (Form $form) {
+            if ($form->model()->wasChanged('password')) {
+                $form->model()->forceFill(['password_changed_at' => now()])->save();
+            }
+
             admin_toastr(trans('admin.update_succeeded'));
 
-            return redirect(admin_url('auth/setting'));
+            return redirect(admin_url('/'));
         });
 
         return $form;
@@ -193,6 +202,13 @@ class AuthController extends Controller
         admin_toastr(trans('admin.login_successful'));
 
         $request->session()->regenerate();
+
+        $user = $this->guard()->user();
+        if ($user && method_exists($user, 'passwordMustBeChanged') && $user->passwordMustBeChanged()) {
+            admin_toastr('admin.password_change_required', 'warning');
+
+            return redirect(admin_url('auth/setting'));
+        }
 
         return redirect()->intended($this->redirectPath());
     }

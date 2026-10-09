@@ -20,7 +20,16 @@ class Administrator extends Model implements AuthenticatableContract
     use HasPermissions;
     use DefaultDatetimeFormat;
 
-    protected $fillable = ['username', 'password', 'name', 'avatar'];
+    protected $fillable = ['username', 'password', 'name', 'avatar', 'password_changed_at'];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'password_changed_at' => 'datetime',
+    ];
 
     /**
      * Create a new Eloquent model instance.
@@ -36,6 +45,16 @@ class Administrator extends Model implements AuthenticatableContract
         $this->setTable(config('admin.database.users_table'));
 
         parent::__construct($attributes);
+    }
+
+    /**
+     * Whether the user must change their password before using the dashboard.
+     *
+     * @return bool
+     */
+    public function passwordMustBeChanged()
+    {
+        return is_null($this->password_changed_at);
     }
 
     /**

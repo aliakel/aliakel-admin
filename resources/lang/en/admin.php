@@ -11,6 +11,7 @@ return [
     'password_confirmation' => 'Password confirmation',
     'remember_me'           => 'Remember me',
     'user_setting'          => 'User setting',
+    'password_change_required' => 'You must change your password before continuing.',
     'avatar'                => 'Avatar',
     'list'                  => 'List',
     'new'                   => 'New',
@@ -101,6 +102,9 @@ return [
     'grid_items_selected'    => '{n} items selected',
 
     'menu_titles'            => [],
+    'all_rights_reserved'    => 'All rights reserved',
+    'developed_by'           => 'Developed by',
+    'developer_name'         => 'Eng. Ali Akel',
     'prev'                   => 'Prev',
     'next'                   => 'Next',
     'quick_create'           => 'Quick create',

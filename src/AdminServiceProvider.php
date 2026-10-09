@@ -41,13 +41,14 @@ class AdminServiceProvider extends ServiceProvider
      * @var array
      */
     protected $routeMiddleware = [
-        'admin.auth'       => Middleware\Authenticate::class,
-        'admin.locale'     => Middleware\Locale::class,
-        'admin.pjax'       => Middleware\Pjax::class,
-        'admin.log'        => Middleware\LogOperation::class,
-        'admin.permission' => Middleware\Permission::class,
-        'admin.bootstrap'  => Middleware\Bootstrap::class,
-        'admin.session'    => Middleware\Session::class,
+        'admin.auth'                   => Middleware\Authenticate::class,
+        'admin.locale'                 => Middleware\Locale::class,
+        'admin.pjax'                   => Middleware\Pjax::class,
+        'admin.log'                    => Middleware\LogOperation::class,
+        'admin.permission'             => Middleware\Permission::class,
+        'admin.bootstrap'              => Middleware\Bootstrap::class,
+        'admin.session'                => Middleware\Session::class,
+        'admin.force-password-change'  => Middleware\ForcePasswordChange::class,
     ];
 
     /**
@@ -59,6 +60,7 @@ class AdminServiceProvider extends ServiceProvider
         'admin' => [
             'admin.locale',
             'admin.auth',
+            'admin.force-password-change',
             'admin.pjax',
             'admin.log',
             'admin.bootstrap',
